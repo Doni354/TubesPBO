@@ -641,8 +641,6 @@ Pembagian tugas untuk tim 6 orang:
 | **Riyan, Keren**        | GUI — Login & Form Publik | `gui/login/*`, `gui/formDispen/*`                                                                                                                      | LoginFrame, FormKeterlambatan, FormDispensasi, Main entry point.                                                    |
 | **Keren, Daffa, Bilal** | GUI — Dashboard Admin     | `gui/dashboard/*`, `gui/widget/*`                                                                                                                      | DashboardUtama, SidebarPanel, DashboardPanel, LateEntryPanel, ExitPermitPanel, ReportPanel, AdminPanel, BlankPanel. |
 
-> **Catatan:** PJ 6 memiliki file paling banyak (8 file, ~1400+ baris). Bisa dipecah lagi jika diperlukan: 1 orang handle `DashboardUtama` + `SidebarPanel` + `DashboardPanel` + `BlankPanel`, 1 orang handle `LateEntryPanel` + `ExitPermitPanel` + `ReportPanel` + `AdminPanel`.
-
 ---
 
 ## 📊 Ringkasan Statistik Proyek
