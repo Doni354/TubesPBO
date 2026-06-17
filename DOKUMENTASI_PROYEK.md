@@ -29,6 +29,9 @@
   - [🎓 Konsep OOP yang Digunakan](#-konsep-oop-yang-digunakan)
   - [👥 Pembagian Penanggung Jawab](#-pembagian-penanggung-jawab)
   - [📊 Ringkasan Statistik Proyek](#-ringkasan-statistik-proyek)
+  - [🚀 Proses Build ke .JAR \& Cara Menjalankan](#-proses-build-ke-jar--cara-menjalankan)
+  - [🔄 Flow Navigasi Aplikasi (Antar Tampilan / Screen)](#-flow-navigasi-aplikasi-antar-tampilan--screen)
+  - [📌 Rangkuman Flow untuk Presentasi](#-rangkuman-flow-untuk-presentasi)
 
 ---
 
@@ -659,3 +662,396 @@ Pembagian tugas untuk tim 6 orang:
 | Auth                     | Firebase Authentication (REST API)                                                |
 | GUI Framework            | Java Swing                                                                        |
 | Export Library           | Apache POI (.xlsx)                                                                |
+
+---
+
+## 🚀 Proses Build ke .JAR & Cara Menjalankan
+
+### Kenapa Bisa Jadi File .JAR?
+
+Proyek ini menggunakan **Maven** sebagai build tool, dan di dalam `pom.xml` dikonfigurasi plugin khusus bernama **Maven Shade Plugin** (v3.5.0). Plugin ini bertugas membuat **Fat JAR / Uber JAR**, yaitu satu file `.jar` yang berisi:
+
+1. **Semua class hasil kompilasi** proyek kita (`com.smartschool.permit.tubespbo.*`)
+2. **Semua dependency (library) pihak ketiga** — Firebase Admin SDK, Gson, Apache POI, dll — di-bundle langsung ke dalam JAR
+3. **File resource** seperti `serviceAccountKey.json` (credential Firebase)
+4. **File `MANIFEST.MF`** yang menentukan titik masuk (main class) aplikasi
+
+#### Konfigurasi Shade Plugin di `pom.xml`
+
+```xml
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-shade-plugin</artifactId>
+    <version>3.5.0</version>
+    <executions>
+        <execution>
+            <phase>package</phase>   <!-- Dijalankan saat fase "package" -->
+            <goals>
+                <goal>shade</goal>
+            </goals>
+            <configuration>
+                <transformers>
+                    <!-- Menentukan Main-Class di MANIFEST.MF -->
+                    <transformer implementation="...ManifestResourceTransformer">
+                        <mainClass>com.smartschool.permit.tubespbo.gui.login.LoginFrame</mainClass>
+                    </transformer>
+                    <!-- Menggabungkan file META-INF/services dari semua library -->
+                    <transformer implementation="...ServicesResourceTransformer"/>
+                </transformers>
+                <filters>
+                    <!-- Menghapus file signature dari library agar JAR tidak corrupt -->
+                    <filter>
+                        <artifact>*:*</artifact>
+                        <excludes>
+                            <exclude>META-INF/*.SF</exclude>
+                            <exclude>META-INF/*.DSA</exclude>
+                            <exclude>META-INF/*.RSA</exclude>
+                        </excludes>
+                    </filter>
+                </filters>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+```
+
+#### Penjelasan Proses Build
+
+| Langkah | Apa yang Terjadi |
+|---------|-----------------|
+| 1. `mvn clean package` | Maven menjalankan lifecycle: compile → test → package |
+| 2. **Compile** | Semua file `.java` dikompilasi menjadi `.class` ke folder `target/classes/` |
+| 3. **Package (sebelum shade)** | Maven membuat `original-TubesPBO-1.0-SNAPSHOT.jar` — hanya berisi class proyek tanpa dependency |
+| 4. **Shade Plugin aktif** | Plugin mengambil JAR original + semua JAR dependency, lalu menggabungkannya menjadi satu file |
+| 5. **Filter signature** | File `.SF`, `.DSA`, `.RSA` dari library dihapus agar tidak bentrok |
+| 6. **Inject MANIFEST** | `Main-Class: com.smartschool.permit.tubespbo.gui.login.LoginFrame` ditulis ke `META-INF/MANIFEST.MF` |
+| 7. **Hasil akhir** | `TubesPBO-1.0-SNAPSHOT.jar` (~67 MB, berisi semua dependency) — siap dijalankan! |
+
+#### File Hasil Build di `target/`
+
+```
+target/
+├── TubesPBO-1.0-SNAPSHOT.jar          ← FAT JAR (yang dipakai untuk run)
+├── TubesPBO-1.0-SNAPSHOT-shaded.jar   ← Salinan shaded JAR
+├── original-TubesPBO-1.0-SNAPSHOT.jar ← JAR original (tanpa dependency)
+└── classes/                           ← Folder hasil kompilasi .class
+```
+
+### Cara Menjalankan
+
+```bash
+# Cukup double-click file JAR, atau jalankan via terminal:
+java -jar target/TubesPBO-1.0-SNAPSHOT.jar
+```
+
+> **Catatan:** JRE/JDK versi 20+ harus terinstall di komputer. File `serviceAccountKey.json` sudah ter-embed di dalam JAR sehingga tidak perlu file eksternal tambahan.
+
+---
+
+## 🔄 Flow Navigasi Aplikasi (Antar Tampilan / Screen)
+
+### Diagram Navigasi Utama
+
+```mermaid
+flowchart TD
+    subgraph STARTUP["🟢 STARTUP"]
+        JAR["java -jar TubesPBO.jar"]
+        MANIFEST["MANIFEST.MF<br/>Main-Class: LoginFrame"]
+        LF_MAIN["LoginFrame.main()"]
+        NIMBUS["Set Look & Feel: Nimbus"]
+    end
+
+    subgraph PUBLIC["📝 FORM PUBLIK (Tanpa Login)"]
+        FK["FormKeterlambatan<br/>Form Siswa Terlambat"]
+        FD["FormDispensasi<br/>Form Izin Keluar"]
+    end
+
+    subgraph AUTH["🔐 AUTENTIKASI"]
+        LOGIN["LoginFrame<br/>Email + Password"]
+        AUTH_SVC["AuthService.login()"]
+        FB_REST["Firebase Auth REST API<br/>signInWithPassword"]
+        ADMIN_REPO["AdminRepository.getByUid()"]
+        USER_SESS["UserSession.login(adminUser)"]
+    end
+
+    subgraph DASHBOARD["🏠 DASHBOARD ADMIN"]
+        DU["DashboardUtama (JFrame)<br/>BorderLayout"]
+        SIDEBAR["SidebarPanel<br/>5 Menu + Logout"]
+        CARD["CardLayout Panel"]
+
+        DP["DashboardPanel<br/>Statistik & Aktivitas"]
+        LEP["LateEntryPanel<br/>Kelola Terlambat"]
+        EPP["ExitPermitPanel<br/>Kelola Izin Keluar"]
+        RP["ReportPanel<br/>Laporan & Rekap"]
+        AP["AdminPanel<br/>Kelola Admin"]
+    end
+
+    JAR --> MANIFEST --> LF_MAIN --> NIMBUS --> LOGIN
+
+    LOGIN -->|"Tombol 'Kembali'"| FK
+    FK -->|"Tombol 'Form Dispensasi'"| FD
+    FD -->|"Tombol 'Form Terlambat'"| FK
+    FK -->|"Tombol 'Masuk sebagai Admin'"| LOGIN
+    FD -->|"Tombol 'Masuk sebagai Admin'"| LOGIN
+
+    LOGIN -->|"Tombol 'Masuk'"| AUTH_SVC
+    AUTH_SVC --> FB_REST
+    FB_REST -->|"uid"| ADMIN_REPO
+    ADMIN_REPO -->|"AdminUser"| USER_SESS
+    USER_SESS -->|"Login Berhasil"| DU
+
+    DU --> SIDEBAR
+    DU --> CARD
+    SIDEBAR -->|"Klik Menu"| CARD
+    CARD --> DP
+    CARD --> LEP
+    CARD --> EPP
+    CARD --> RP
+    CARD --> AP
+
+    SIDEBAR -->|"Logout"| LOGIN
+
+    style STARTUP fill:#e8f5e9,stroke:#4caf50
+    style PUBLIC fill:#e3f2fd,stroke:#2196f3
+    style AUTH fill:#fff3e0,stroke:#ff9800
+    style DASHBOARD fill:#f3e5f5,stroke:#9c27b0
+```
+
+### Alur Detail Step-by-Step
+
+#### 1️⃣ Aplikasi Pertama Kali Dijalankan
+
+```
+java -jar TubesPBO.jar
+         │
+         ▼
+MANIFEST.MF membaca: Main-Class = LoginFrame
+         │
+         ▼
+LoginFrame.main(args)
+    ├── Set Look & Feel ke "Nimbus" (UI modern)
+    └── SwingUtilities.invokeLater() → new LoginFrame().setVisible(true)
+         │
+         ▼
+🖥️ Tampilan: FORM LOGIN (Email + Password + Tombol Masuk + Tombol Kembali)
+```
+
+> **Kenapa `LoginFrame` jadi entry point, bukan `Main.java`?**
+> Di `pom.xml`, `mainClass` di Shade Plugin diset ke `LoginFrame`. Meskipun ada `Main.java` yang memanggil `LoginFrame.main()`, yang dieksekusi saat double-click JAR adalah `LoginFrame` langsung.
+
+#### 2️⃣ Navigasi dari Login ke Form Publik (dan sebaliknya)
+
+```
+┌──────────────┐        Tombol "Kembali"        ┌─────────────────────┐
+│  LoginFrame  │ ─────────────────────────────→  │  FormKeterlambatan  │
+│  (JFrame)    │                                 │  (JFrame)           │
+└──────────────┘        Tombol "Masuk             └─────────────────────┘
+       ▲              sebagai Admin"                   │       ▲
+       │                    │                          │       │
+       └────────────────────┘                          │       │
+       ▲                                   Tombol     │       │  Tombol
+       │   Tombol "Masuk                "Form          │       │  "Form
+       │   sebagai Admin"            Dispensasi"       ▼       │  Terlambat"
+       │                           ┌─────────────────────┐
+       └───────────────────────────│   FormDispensasi    │
+                                   │   (JFrame)          │
+                                   └─────────────────────┘
+```
+
+**Cara kerja perpindahan:**
+- Setiap perpindahan memanggil `this.dispose()` (tutup JFrame sekarang) lalu `new [TargetFrame]().setVisible(true)` (buka JFrame baru)
+- Form publik (`FormKeterlambatan` dan `FormDispensasi`) **tidak memerlukan login** — siapapun bisa isi
+
+**File yang terlibat saat submit form publik:**
+
+| Step | File | Aksi |
+|------|------|------|
+| 1 | `FormKeterlambatan.java` / `FormDispensasi.java` | User isi form, klik "Berikutnya" |
+| 2 | `PermitService.java` | Validasi + set timestamp, status `PENDING`, tahun ajaran otomatis |
+| 3 | `PermitRepository.java` | Kirim data ke Firestore collection `"permits"` |
+| 4 | `BaseRepository.java` | Eksekusi `create()` — ambil `Firestore` instance dari `FirestoreConnection` |
+| 5 | `FirestoreConnection.java` | Singleton — baca `serviceAccountKey.json`, init Firebase, return `Firestore` |
+
+#### 3️⃣ Proses Login Admin
+
+```
+LoginFrame ──[Klik "Masuk"]──→ handleLogin()
+    │
+    ├── Validasi input (email kosong? format email valid?)
+    │
+    ├── SwingWorker (background thread, agar UI tidak freeze)
+    │       │
+    │       ▼
+    │   AuthService.login(email, password)
+    │       │
+    │       ├── HTTP POST ke Firebase Auth REST API
+    │       │   URL: identitytoolkit.googleapis.com/v1/accounts:signInWithPassword
+    │       │   Body: { email, password, returnSecureToken: true }
+    │       │
+    │       ├── Response 200 → Ambil "localId" (uid) dari response JSON
+    │       │
+    │       ├── AdminRepository.getByUid(uid)
+    │       │   → Query Firestore collection "admins" where uid == localId
+    │       │   → Return AdminUser object
+    │       │
+    │       └── UserSession.getInstance().login(adminUser)
+    │           → Simpan AdminUser ke Singleton session
+    │
+    ├── Login BERHASIL:
+    │       LoginFrame.dispose()  → Tutup form login
+    │       new DashboardUtama().setVisible(true) → Buka dashboard
+    │
+    └── Login GAGAL:
+            Tampilkan JOptionPane error message
+            Button kembali enabled
+```
+
+#### 4️⃣ Navigasi di Dalam Dashboard Admin
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    DashboardUtama (JFrame)                   │
+│                   Layout: BorderLayout                      │
+│                                                             │
+│  ┌──────────────┐  ┌────────────────────────────────────┐  │
+│  │              │  │                                    │  │
+│  │  SidebarPanel│  │     CardLayout (mainContentPanel)  │  │
+│  │  (WEST)     │  │     (CENTER)                       │  │
+│  │              │  │                                    │  │
+│  │  🏠 Dashboard│──→  DashboardPanel    ← default      │  │
+│  │  📋 Terlambat│──→  LateEntryPanel                   │  │
+│  │  🚪 Izin     │──→  ExitPermitPanel                  │  │
+│  │  📊 Laporan  │──→  ReportPanel                      │  │
+│  │  👤 Admin    │──→  AdminPanel                       │  │
+│  │              │  │                                    │  │
+│  │  ───────────│  │                                    │  │
+│  │  🔓 Logout   │  │                                    │  │
+│  └──────────────┘  └────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Mekanisme perpindahan panel:**
+
+```java
+// Di DashboardUtama constructor:
+cardLayout = new CardLayout();
+mainContentPanel = new JPanel(cardLayout);
+
+// Semua panel didaftarkan dengan nama unik:
+mainContentPanel.add(new DashboardPanel(),  "Dashboard");
+mainContentPanel.add(new LateEntryPanel(),  "Siswa Terlambat");
+mainContentPanel.add(new ExitPermitPanel(), "Izin Keluar");
+mainContentPanel.add(new ReportPanel(),     "Laporan");
+mainContentPanel.add(new AdminPanel(),      "Kelola Admin");
+
+// SidebarPanel menerima callback:
+SidebarPanel sidebar = new SidebarPanel(
+    (menuName) -> cardLayout.show(mainContentPanel, menuName),  // navigasi
+    () -> { /* logout logic */ }                                 // logout
+);
+```
+
+- **Klik menu di sidebar** → `SidebarPanel` memanggil `onMenuSelected.accept("Nama Panel")` → `CardLayout.show()` menampilkan panel yang sesuai
+- **Klik Logout** → `SidebarPanel` memanggil `onLogout.run()` → konfirmasi → `AuthService.logout()` + `UserSession.logout()` → tutup `DashboardUtama` → buka `LoginFrame`
+
+#### 5️⃣ Alur Data di Setiap Panel Dashboard
+
+```mermaid
+flowchart LR
+    subgraph GUI["GUI Panel"]
+        DP["DashboardPanel"]
+        LEP["LateEntryPanel"]
+        EPP["ExitPermitPanel"]
+        RP["ReportPanel"]
+        AP["AdminPanel"]
+    end
+
+    subgraph SERVICE["Service Layer"]
+        RS["ReportService"]
+        PS["PermitService"]
+        AS["AdminService"]
+    end
+
+    subgraph REPO["Repository Layer"]
+        PR["PermitRepository"]
+        AR["AdminRepository"]
+    end
+
+    subgraph INFRA["Infrastructure"]
+        FC["FirestoreConnection<br/>(Singleton)"]
+        US["UserSession<br/>(Singleton)"]
+        FS[("☁️ Google Cloud<br/>Firestore")]
+    end
+
+    DP -->|"getDashboardStats()"| RS
+    DP -->|"getAllPermits()"| PS
+    LEP -->|"getPermitsByType(LATE_ENTRY)"| PS
+    LEP -->|"approvePermit() / deletePermit()"| PS
+    EPP -->|"getPermitsByType(EXIT_PERMIT)"| PS
+    EPP -->|"approvePermit() / deletePermit()"| PS
+    RP -->|"getStudentSummary() / getMonthlyRecap()"| RS
+    AP -->|"getAllAdmins() / createAdmin() / deleteAdmin()"| AS
+
+    RS --> PR
+    PS --> PR
+    AS --> AR
+
+    PR --> FC
+    AR --> FC
+    FC --> FS
+
+    DP -.->|"cek schoolId"| US
+    LEP -.->|"cek schoolId"| US
+    EPP -.->|"cek schoolId"| US
+    AP -.->|"cek isSuperAdmin()"| US
+
+    style GUI fill:#e3f2fd,stroke:#1565c0
+    style SERVICE fill:#fff3e0,stroke:#e65100
+    style REPO fill:#e8f5e9,stroke:#2e7d32
+    style INFRA fill:#fce4ec,stroke:#c62828
+```
+
+| Panel | Service yang Digunakan | Data yang Ditampilkan |
+|-------|----------------------|----------------------|
+| `DashboardPanel` | `ReportService` + `PermitService` | 4 kartu statistik (terlambat hari ini, izin keluar hari ini, pending, total) + tabel 15 aktivitas terbaru |
+| `LateEntryPanel` | `PermitService` | Tabel siswa terlambat + filter kelas + search + pagination + approve/delete |
+| `ExitPermitPanel` | `PermitService` | Tabel izin keluar + filter kelas + search + pagination + approve/delete |
+| `ReportPanel` | `ReportService` | Ringkasan per siswa (top 20) + rekap bulanan per kelas |
+| `AdminPanel` | `AdminService` | Tabel admin + form tambah admin (hanya Super Admin) + hapus + reset password |
+
+#### 6️⃣ Inisialisasi Koneksi Database (Singleton Pattern)
+
+```
+Pertama kali ada operasi ke Firestore (misal login atau submit form):
+    │
+    ▼
+BaseRepository constructor → FirestoreConnection.getInstance()
+    │
+    ├── Pertama kali dipanggil?
+    │   ├── Ya → new FirestoreConnection()
+    │   │         ├── Baca serviceAccountKey.json dari dalam JAR (resources)
+    │   │         ├── GoogleCredentials.fromStream(serviceAccount)
+    │   │         ├── FirebaseApp.initializeApp(options)
+    │   │         └── FirestoreClient.getFirestore() → simpan ke this.db
+    │   │
+    │   └── Tidak → Return instance yang sudah ada (re-use koneksi)
+    │
+    ▼
+Koneksi siap dipakai untuk semua operasi CRUD
+```
+
+> **Penting:** Koneksi Firebase hanya dibuat **sekali** selama aplikasi berjalan (Singleton Pattern). Semua repository berbagi koneksi yang sama.
+
+---
+
+## 📌 Rangkuman Flow untuk Presentasi
+
+### Checklist Poin Presentasi
+
+1. ✅ **Build:** `mvn clean package` → Maven Shade Plugin menggabungkan semua dependency + class menjadi satu file `TubesPBO-1.0-SNAPSHOT.jar` (~67 MB)
+2. ✅ **Run:** `java -jar TubesPBO.jar` → MANIFEST.MF mengarahkan ke `LoginFrame.main()` → tampil form login
+3. ✅ **Tanpa login:** User bisa mengakses `FormKeterlambatan` ↔ `FormDispensasi` untuk mencatat keterlambatan/dispensasi langsung ke Firestore
+4. ✅ **Login admin:** Email + password → Firebase Auth REST API → cek di Firestore `admins` → simpan session → buka `DashboardUtama`
+5. ✅ **Dashboard:** `CardLayout` + `SidebarPanel` → klik menu sidebar = ganti panel yang ditampilkan (tanpa buka window baru)
+6. ✅ **Setiap panel** memanggil **Service** → **Repository** → **Firestore** (3-layer architecture)
+7. ✅ **Logout:** Hapus session → tutup dashboard → kembali ke `LoginFrame`
