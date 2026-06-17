@@ -754,67 +754,40 @@ java -jar target/TubesPBO-1.0-SNAPSHOT.jar
 
 ```mermaid
 flowchart TD
-    subgraph STARTUP["🟢 STARTUP"]
-        JAR["java -jar TubesPBO.jar"]
-        MANIFEST["MANIFEST.MF<br/>Main-Class: LoginFrame"]
-        LF_MAIN["LoginFrame.main()"]
-        NIMBUS["Set Look & Feel: Nimbus"]
+    subgraph STARTUP ["Startup"]
+        JAR["java -jar TubesPBO.jar"] --> MANIFEST["MANIFEST.MF"] --> LF_MAIN["LoginFrame.main"] --> LOGIN["LoginFrame"]
     end
 
-    subgraph PUBLIC["📝 FORM PUBLIK (Tanpa Login)"]
-        FK["FormKeterlambatan<br/>Form Siswa Terlambat"]
-        FD["FormDispensasi<br/>Form Izin Keluar"]
+    subgraph PUBLIC ["Form Publik - Tanpa Login"]
+        FK["FormKeterlambatan"]
+        FD["FormDispensasi"]
     end
 
-    subgraph AUTH["🔐 AUTENTIKASI"]
-        LOGIN["LoginFrame<br/>Email + Password"]
-        AUTH_SVC["AuthService.login()"]
-        FB_REST["Firebase Auth REST API<br/>signInWithPassword"]
-        ADMIN_REPO["AdminRepository.getByUid()"]
-        USER_SESS["UserSession.login(adminUser)"]
+    subgraph AUTH ["Proses Login"]
+        AUTH_SVC["AuthService.login"] --> FB_REST["Firebase Auth REST API"]
+        FB_REST --> ADMIN_REPO["AdminRepository.getByUid"]
+        ADMIN_REPO --> USER_SESS["UserSession.login"]
     end
 
-    subgraph DASHBOARD["🏠 DASHBOARD ADMIN"]
-        DU["DashboardUtama (JFrame)<br/>BorderLayout"]
-        SIDEBAR["SidebarPanel<br/>5 Menu + Logout"]
-        CARD["CardLayout Panel"]
-
-        DP["DashboardPanel<br/>Statistik & Aktivitas"]
-        LEP["LateEntryPanel<br/>Kelola Terlambat"]
-        EPP["ExitPermitPanel<br/>Kelola Izin Keluar"]
-        RP["ReportPanel<br/>Laporan & Rekap"]
-        AP["AdminPanel<br/>Kelola Admin"]
+    subgraph DASHBOARD ["Dashboard Admin"]
+        DU["DashboardUtama"] --> SIDEBAR["SidebarPanel"]
+        DU --> CARD["CardLayout"]
+        CARD --> DP["DashboardPanel"]
+        CARD --> LEP["LateEntryPanel"]
+        CARD --> EPP["ExitPermitPanel"]
+        CARD --> RP["ReportPanel"]
+        CARD --> AP["AdminPanel"]
     end
 
-    JAR --> MANIFEST --> LF_MAIN --> NIMBUS --> LOGIN
-
-    LOGIN -->|"Tombol 'Kembali'"| FK
-    FK -->|"Tombol 'Form Dispensasi'"| FD
-    FD -->|"Tombol 'Form Terlambat'"| FK
-    FK -->|"Tombol 'Masuk sebagai Admin'"| LOGIN
-    FD -->|"Tombol 'Masuk sebagai Admin'"| LOGIN
-
-    LOGIN -->|"Tombol 'Masuk'"| AUTH_SVC
-    AUTH_SVC --> FB_REST
-    FB_REST -->|"uid"| ADMIN_REPO
-    ADMIN_REPO -->|"AdminUser"| USER_SESS
-    USER_SESS -->|"Login Berhasil"| DU
-
-    DU --> SIDEBAR
-    DU --> CARD
-    SIDEBAR -->|"Klik Menu"| CARD
-    CARD --> DP
-    CARD --> LEP
-    CARD --> EPP
-    CARD --> RP
-    CARD --> AP
-
-    SIDEBAR -->|"Logout"| LOGIN
-
-    style STARTUP fill:#e8f5e9,stroke:#4caf50
-    style PUBLIC fill:#e3f2fd,stroke:#2196f3
-    style AUTH fill:#fff3e0,stroke:#ff9800
-    style DASHBOARD fill:#f3e5f5,stroke:#9c27b0
+    LOGIN -- Kembali --> FK
+    FK -- Form Dispensasi --> FD
+    FD -- Form Terlambat --> FK
+    FK -- Masuk Admin --> LOGIN
+    FD -- Masuk Admin --> LOGIN
+    LOGIN -- Masuk --> AUTH_SVC
+    USER_SESS -- Berhasil --> DU
+    SIDEBAR -- Logout --> LOGIN
+    SIDEBAR -- Klik Menu --> CARD
 ```
 
 ### Alur Detail Step-by-Step
@@ -958,7 +931,7 @@ SidebarPanel sidebar = new SidebarPanel(
 
 ```mermaid
 flowchart LR
-    subgraph GUI["GUI Panel"]
+    subgraph GUI ["GUI Panel"]
         DP["DashboardPanel"]
         LEP["LateEntryPanel"]
         EPP["ExitPermitPanel"]
@@ -966,31 +939,28 @@ flowchart LR
         AP["AdminPanel"]
     end
 
-    subgraph SERVICE["Service Layer"]
+    subgraph SERVICE ["Service Layer"]
         RS["ReportService"]
         PS["PermitService"]
         AS["AdminService"]
     end
 
-    subgraph REPO["Repository Layer"]
+    subgraph REPO ["Repository Layer"]
         PR["PermitRepository"]
         AR["AdminRepository"]
     end
 
-    subgraph INFRA["Infrastructure"]
-        FC["FirestoreConnection<br/>(Singleton)"]
-        US["UserSession<br/>(Singleton)"]
-        FS[("☁️ Google Cloud<br/>Firestore")]
+    subgraph INFRA ["Infrastructure"]
+        FC["FirestoreConnection"]
+        FS[("Firestore DB")]
     end
 
-    DP -->|"getDashboardStats()"| RS
-    DP -->|"getAllPermits()"| PS
-    LEP -->|"getPermitsByType(LATE_ENTRY)"| PS
-    LEP -->|"approvePermit() / deletePermit()"| PS
-    EPP -->|"getPermitsByType(EXIT_PERMIT)"| PS
-    EPP -->|"approvePermit() / deletePermit()"| PS
-    RP -->|"getStudentSummary() / getMonthlyRecap()"| RS
-    AP -->|"getAllAdmins() / createAdmin() / deleteAdmin()"| AS
+    DP --> RS
+    DP --> PS
+    LEP --> PS
+    EPP --> PS
+    RP --> RS
+    AP --> AS
 
     RS --> PR
     PS --> PR
@@ -999,16 +969,6 @@ flowchart LR
     PR --> FC
     AR --> FC
     FC --> FS
-
-    DP -.->|"cek schoolId"| US
-    LEP -.->|"cek schoolId"| US
-    EPP -.->|"cek schoolId"| US
-    AP -.->|"cek isSuperAdmin()"| US
-
-    style GUI fill:#e3f2fd,stroke:#1565c0
-    style SERVICE fill:#fff3e0,stroke:#e65100
-    style REPO fill:#e8f5e9,stroke:#2e7d32
-    style INFRA fill:#fce4ec,stroke:#c62828
 ```
 
 | Panel | Service yang Digunakan | Data yang Ditampilkan |
