@@ -20,6 +20,7 @@ public class StudentPermit extends BaseModel implements Exportable, Filterable {
     private PermitType type;
     private String studentName;
     private String className;
+    private String studentId;
     private String reason;
     private long timestamp;
     private Timestamp createdAt;
@@ -74,6 +75,7 @@ public class StudentPermit extends BaseModel implements Exportable, Filterable {
         map.put("type", type != null ? type.name() : null);
         map.put("studentName", studentName);
         map.put("className", className);
+        map.put("studentId", studentId);
         map.put("reason", reason);
         map.put("timestamp", timestamp);
         if (createdAt != null) map.put("createdAt", createdAt);
@@ -106,6 +108,7 @@ public class StudentPermit extends BaseModel implements Exportable, Filterable {
         if (map.get("type") != null) this.type = PermitType.valueOf((String) map.get("type"));
         this.studentName = (String) map.get("studentName");
         this.className = (String) map.get("className");
+        this.studentId = (String) map.get("studentId");
         this.reason = (String) map.get("reason");
         if (map.get("timestamp") != null) this.timestamp = ((Number) map.get("timestamp")).longValue();
         if (map.get("createdAt") != null) this.createdAt = (Timestamp) map.get("createdAt");
@@ -149,6 +152,8 @@ public class StudentPermit extends BaseModel implements Exportable, Filterable {
     public void setStudentName(String studentName) { this.studentName = studentName; }
     public String getClassName() { return className; }
     public void setClassName(String className) { this.className = className; }
+    public String getStudentId() { return studentId; }
+    public void setStudentId(String studentId) { this.studentId = studentId; }
     public String getReason() { return reason; }
     public void setReason(String reason) { this.reason = reason; }
     public long getTimestamp() { return timestamp; }

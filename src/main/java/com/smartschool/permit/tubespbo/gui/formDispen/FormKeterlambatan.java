@@ -25,6 +25,13 @@ public class FormKeterlambatan extends javax.swing.JFrame {
      * Creates new form FormKeterlambatan
      */
     public FormKeterlambatan() {
+        if (!com.smartschool.permit.tubespbo.app.UserSession.getInstance().isStudent()) {
+            SwingUtilities.invokeLater(() -> {
+                new com.smartschool.permit.tubespbo.gui.login.LoginFrame().setVisible(true);
+            });
+            this.dispose();
+            return;
+        }
         initComponents();
         applyCustomStyles();
     }
@@ -212,42 +219,32 @@ public class FormKeterlambatan extends javax.swing.JFrame {
         scrollPane.setBorder(null);
         cp.add(scrollPane, BorderLayout.CENTER);
 
-        // Footer buttons
+        // Footer welcome info
         JPanel footerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         
-        if (com.smartschool.permit.tubespbo.app.UserSession.getInstance().isStudent()) {
-            JLabel welcomeLabel = new JLabel("Login sebagai: " + 
-                com.smartschool.permit.tubespbo.app.UserSession.getInstance().getCurrentStudent().getFullName() + " (" + 
-                com.smartschool.permit.tubespbo.app.UserSession.getInstance().getCurrentStudent().getClassName() + ")");
-            welcomeLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
-            footerPanel.add(welcomeLabel);
-            
-            JButton logoutBtn = new JButton("Logout");
-            logoutBtn.addActionListener(e -> {
-                com.smartschool.permit.tubespbo.app.UserSession.getInstance().logout();
-                this.dispose();
-                new FormKeterlambatan().setVisible(true);
-            });
-            footerPanel.add(logoutBtn);
-            
-            // Hide input fields for student
-            FieldNama.setVisible(false);
-            jLabel3.setVisible(false);
-            jLabel4.setVisible(false);
-            jLabel5.setVisible(false);
-            jLabel6.setVisible(false);
-            jLabel7.setVisible(false);
-            tingkatPanel.setVisible(false);
-            kelasPanel.setVisible(false);
-        } else {
-            JButton loginBtn = new JButton("Login (Siswa / Admin)");
-            loginBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            loginBtn.addActionListener(e -> {
-                this.dispose();
-                new com.smartschool.permit.tubespbo.gui.login.LoginFrame().setVisible(true);
-            });
-            footerPanel.add(loginBtn);
-        }
+        JLabel welcomeLabel = new JLabel("Login sebagai: " + 
+            com.smartschool.permit.tubespbo.app.UserSession.getInstance().getCurrentStudent().getFullName() + " (" + 
+            com.smartschool.permit.tubespbo.app.UserSession.getInstance().getCurrentStudent().getClassName() + ")");
+        welcomeLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+        footerPanel.add(welcomeLabel);
+        
+        JButton logoutBtn = new JButton("Logout");
+        logoutBtn.addActionListener(e -> {
+            com.smartschool.permit.tubespbo.app.UserSession.getInstance().logout();
+            this.dispose();
+            new com.smartschool.permit.tubespbo.gui.login.LoginFrame().setVisible(true);
+        });
+        footerPanel.add(logoutBtn);
+        
+        // Hide input fields (Mandatory Login Mode)
+        FieldNama.setVisible(false);
+        jLabel3.setVisible(false);
+        jLabel4.setVisible(false);
+        jLabel5.setVisible(false);
+        jLabel6.setVisible(false);
+        jLabel7.setVisible(false);
+        tingkatPanel.setVisible(false);
+        kelasPanel.setVisible(false);
         
         cp.add(footerPanel, BorderLayout.SOUTH);
 
@@ -267,11 +264,13 @@ public class FormKeterlambatan extends javax.swing.JFrame {
         String nama = "";
         String tingkat = "";
         String kelas = "";
+        String studentId = "";
         String alasan = AreaReason.getText().trim();
 
         if (com.smartschool.permit.tubespbo.app.UserSession.getInstance().isStudent()) {
             nama = com.smartschool.permit.tubespbo.app.UserSession.getInstance().getCurrentStudent().getFullName();
             String fullClassName = com.smartschool.permit.tubespbo.app.UserSession.getInstance().getCurrentStudent().getClassName();
+            studentId = com.smartschool.permit.tubespbo.app.UserSession.getInstance().getCurrentStudent().getId();
             // Split to tingkat and kelas for fallback if needed, but we'll use fullClassName
             String[] split = fullClassName.split("-");
             tingkat = split[0];
@@ -323,6 +322,7 @@ public class FormKeterlambatan extends javax.swing.JFrame {
 
         final String submissionNama = nama;
         final String submissionKelas = tingkat + "-" + kelas;
+        final String finalStudentId = studentId;
 
         int confirm = JOptionPane.showConfirmDialog(this,
             "Apakah data sudah benar?\n\nNama: " + submissionNama + "\nKelas: " + submissionKelas + "\nAlasan: " + alasan,
@@ -340,6 +340,7 @@ public class FormKeterlambatan extends javax.swing.JFrame {
                 StudentPermit permit = new StudentPermit();
                 permit.setStudentName(submissionNama);
                 permit.setClassName(submissionKelas);
+                permit.setStudentId(finalStudentId);
                 permit.setReason(alasan);
                 permit.setType(PermitType.LATE_ENTRY);
                 permit.setSchoolId("sch_001");

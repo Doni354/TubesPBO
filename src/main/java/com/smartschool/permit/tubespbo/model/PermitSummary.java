@@ -14,6 +14,8 @@ public class PermitSummary implements Exportable {
     private String className;
     private int lateCount;
     private int exitCount;
+    private int totalLateMinutes;
+    private int totalExitMinutes;
 
     public int getTotalCount() {
         return lateCount + exitCount;
@@ -25,7 +27,9 @@ public class PermitSummary implements Exportable {
         map.put("Nama", studentName);
         map.put("Kelas", className);
         map.put("Total Terlambat", lateCount);
+        map.put("Total Menit Terlambat", totalLateMinutes);
         map.put("Total Izin Keluar", exitCount);
+        map.put("Total Menit Izin", totalExitMinutes);
         map.put("Total Semua", getTotalCount());
         return map;
     }
@@ -39,4 +43,8 @@ public class PermitSummary implements Exportable {
     public void setLateCount(int lateCount) { this.lateCount = lateCount; }
     public int getExitCount() { return exitCount; }
     public void setExitCount(int exitCount) { this.exitCount = exitCount; }
+    public int getTotalLateMinutes() { return totalLateMinutes; }
+    public void setTotalLateMinutes(int totalLateMinutes) { this.totalLateMinutes = totalLateMinutes; }
+    public int getTotalExitMinutes() { return totalExitMinutes; }
+    public void setTotalExitMinutes(int totalExitMinutes) { this.totalExitMinutes = totalExitMinutes; }
 }

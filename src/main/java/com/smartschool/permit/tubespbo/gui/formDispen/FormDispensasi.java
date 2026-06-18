@@ -21,13 +21,19 @@ import java.util.logging.Logger;
 public class FormDispensasi extends javax.swing.JFrame {
     
     private static final Logger logger = Logger.getLogger(FormDispensasi.class.getName());
-    private JRadioButton RadioKelasAlphabetK;
     private JCheckBox CheckKembali;
 
     /**
      * Creates new form FormDispensasi
      */
     public FormDispensasi() {
+        if (!com.smartschool.permit.tubespbo.app.UserSession.getInstance().isStudent()) {
+            SwingUtilities.invokeLater(() -> {
+                new com.smartschool.permit.tubespbo.gui.login.LoginFrame().setVisible(true);
+            });
+            this.dispose();
+            return;
+        }
         initComponents();
         applyCustomStyles();
     }
@@ -235,43 +241,33 @@ public class FormDispensasi extends javax.swing.JFrame {
         scrollPane.setBorder(null);
         cp.add(scrollPane, BorderLayout.CENTER);
 
-        // Footer buttons
+        // Footer welcome info
         JPanel footerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         
-        if (com.smartschool.permit.tubespbo.app.UserSession.getInstance().isStudent()) {
-            JLabel welcomeLabel = new JLabel("Login sebagai: " + 
-                com.smartschool.permit.tubespbo.app.UserSession.getInstance().getCurrentStudent().getFullName() + " (" + 
-                com.smartschool.permit.tubespbo.app.UserSession.getInstance().getCurrentStudent().getClassName() + ")");
-            welcomeLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
-            footerPanel.add(welcomeLabel);
-            
-            JButton logoutBtn = new JButton("Logout");
-            logoutBtn.addActionListener(e -> {
-                com.smartschool.permit.tubespbo.app.UserSession.getInstance().logout();
-                this.dispose();
-                new FormDispensasi().setVisible(true);
-            });
-            footerPanel.add(logoutBtn);
-            
-            // Hide input fields for student
-            FieldNama.setVisible(false);
-            jLabel3.setVisible(false);
-            jLabel4.setVisible(false);
-            jLabel5.setVisible(false);
-            jLabel6.setVisible(false);
-            jLabel7.setVisible(false);
-            jLabel8.setVisible(false);
-            tingkatPanel.setVisible(false);
-            kelasPanel.setVisible(false);
-        } else {
-            JButton loginBtn = new JButton("Login (Siswa / Admin)");
-            loginBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            loginBtn.addActionListener(e -> {
-                this.dispose();
-                new com.smartschool.permit.tubespbo.gui.login.LoginFrame().setVisible(true);
-            });
-            footerPanel.add(loginBtn);
-        }
+        JLabel welcomeLabel = new JLabel("Login sebagai: " + 
+            com.smartschool.permit.tubespbo.app.UserSession.getInstance().getCurrentStudent().getFullName() + " (" + 
+            com.smartschool.permit.tubespbo.app.UserSession.getInstance().getCurrentStudent().getClassName() + ")");
+        welcomeLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+        footerPanel.add(welcomeLabel);
+        
+        JButton logoutBtn = new JButton("Logout");
+        logoutBtn.addActionListener(e -> {
+            com.smartschool.permit.tubespbo.app.UserSession.getInstance().logout();
+            this.dispose();
+            new com.smartschool.permit.tubespbo.gui.login.LoginFrame().setVisible(true);
+        });
+        footerPanel.add(logoutBtn);
+        
+        // Hide input fields (Mandatory Login Mode)
+        FieldNama.setVisible(false);
+        jLabel3.setVisible(false);
+        jLabel4.setVisible(false);
+        jLabel5.setVisible(false);
+        jLabel6.setVisible(false);
+        jLabel7.setVisible(false);
+        jLabel8.setVisible(false);
+        tingkatPanel.setVisible(false);
+        kelasPanel.setVisible(false);
         
         cp.add(footerPanel, BorderLayout.SOUTH);
 
@@ -291,52 +287,21 @@ public class FormDispensasi extends javax.swing.JFrame {
         String nama = "";
         String tingkat = "";
         String kelas = "";
+        String studentId = "";
         String alasan = TextAreaAlasan.getText().trim();
 
         if (com.smartschool.permit.tubespbo.app.UserSession.getInstance().isStudent()) {
             nama = com.smartschool.permit.tubespbo.app.UserSession.getInstance().getCurrentStudent().getFullName();
             String fullClassName = com.smartschool.permit.tubespbo.app.UserSession.getInstance().getCurrentStudent().getClassName();
+            studentId = com.smartschool.permit.tubespbo.app.UserSession.getInstance().getCurrentStudent().getId();
             String[] split = fullClassName.split("-");
             tingkat = split[0];
             if (split.length > 1) kelas = split[1];
         } else {
+            // This else block should theoretically not be reachable due to redirect
             nama = FieldNama.getText().trim();
-            if (nama.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Nama lengkap harus diisi!", "Validasi Gagal", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-            
-            // Format to Title Case
-            String[] words = nama.split("\\s+");
-            StringBuilder sb = new StringBuilder();
-            for (String w : words) {
-                if (!w.isEmpty()) sb.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1).toLowerCase()).append(" ");
-            }
-            nama = sb.toString().trim();
-            FieldNama.setText(nama);
-
             tingkat = RadioX.isSelected() ? "X" : (RadioXI.isSelected() ? "XI" : (RadioXII.isSelected() ? "XII" : ""));
-            if (tingkat.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Pilih tingkat kelas!", "Validasi Gagal", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-
-            if (RadioKelasAlphabetA.isSelected()) kelas = "A";
-            else if (RadioKelasAlphabetB.isSelected()) kelas = "B";
-            else if (RadioKelasAlphabetC.isSelected()) kelas = "C";
-            else if (RadioKelasAlphabetD.isSelected()) kelas = "D";
-            else if (RadioKelasAlphabetE.isSelected()) kelas = "E";
-            else if (RadioKelasAlphabetF.isSelected()) kelas = "F";
-            else if (RadioKelasAlphabetG.isSelected()) kelas = "G";
-            else if (RadioKelasAlphabetH.isSelected()) kelas = "H";
-            else if (RadioKelasAlphabetI.isSelected()) kelas = "I";
-            else if (RadionKelasAlphabetJ.isSelected()) kelas = "J";
-            else if (RadioKelasAlphabetK.isSelected()) kelas = "K";
-            
-            if (kelas.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Pilih kelas!", "Validasi Gagal", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
+            // ... truncated manual validation ...
         }
 
         if (alasan.isEmpty()) {
@@ -346,6 +311,7 @@ public class FormDispensasi extends javax.swing.JFrame {
 
         final String submissionNama = nama;
         final String submissionKelas = tingkat + "-" + kelas;
+        final String finalStudentId = studentId;
 
         int confirm = JOptionPane.showConfirmDialog(this,
             "Apakah data sudah benar?\n\nNama: " + submissionNama + "\nKelas: " + submissionKelas + "\nAlasan: " + alasan,
@@ -380,6 +346,7 @@ public class FormDispensasi extends javax.swing.JFrame {
                 StudentPermit permit = new StudentPermit();
                 permit.setStudentName(submissionNama);
                 permit.setClassName(submissionKelas);
+                permit.setStudentId(finalStudentId);
                 permit.setReason(alasan);
                 permit.setType(PermitType.EXIT_PERMIT);
                 permit.setSchoolId("sch_001");
@@ -436,6 +403,7 @@ public class FormDispensasi extends javax.swing.JFrame {
     private JRadioButton RadioXI;
     private JRadioButton RadioXII;
     private JRadioButton RadionKelasAlphabetJ;
+    private JRadioButton RadioKelasAlphabetK;
     private JSpinner SpinnerTimer;
     private JTextArea TextAreaAlasan;
     private JPanel Top;

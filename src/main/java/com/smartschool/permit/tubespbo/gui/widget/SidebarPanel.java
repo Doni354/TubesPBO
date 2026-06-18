@@ -44,6 +44,7 @@ public class SidebarPanel extends JPanel {
             "Siswa Terlambat",
             "Izin Keluar",
             "Laporan",
+            "Data Siswa",
             "Kelola Admin"
         };
 

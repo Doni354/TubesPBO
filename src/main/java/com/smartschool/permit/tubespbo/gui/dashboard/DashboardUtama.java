@@ -28,6 +28,7 @@ public class DashboardUtama extends JFrame {
         mainContentPanel.add(new LateEntryPanel(), "Siswa Terlambat");
         mainContentPanel.add(new ExitPermitPanel(), "Izin Keluar");
         mainContentPanel.add(new ReportPanel(), "Laporan");
+        mainContentPanel.add(new StudentDataPanel(), "Data Siswa");
         mainContentPanel.add(new AdminPanel(), "Kelola Admin");
 
         // Tambahkan komponen sidebar yang terpisah di sebelah kiri
