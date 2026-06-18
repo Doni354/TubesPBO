@@ -7,12 +7,10 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import com.smartschool.permit.tubespbo.app.UserSession;
 import com.smartschool.permit.tubespbo.model.Student;
 import com.smartschool.permit.tubespbo.model.StudentPermit;
-import com.smartschool.permit.tubespbo.model.PermitSummary;
 import com.smartschool.permit.tubespbo.repository.StudentRepository;
 import com.smartschool.permit.tubespbo.repository.PermitRepository;
 
@@ -46,14 +44,13 @@ public class StudentDataPanel extends JPanel {
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 8; // Only Allow Action button (if I add one) or nothing for now
+                return column == 8;
             }
         };
 
         table = new JTable(tableModel);
         table.setRowHeight(30);
         
-        // Custom cell renderer for "Lihat Riwayat" button
         table.getColumnModel().getColumn(8).setCellRenderer(new ButtonRenderer());
         table.getColumnModel().getColumn(8).setCellEditor(new ButtonEditor(new JCheckBox()));
 
@@ -73,11 +70,9 @@ public class StudentDataPanel extends JPanel {
         new SwingWorker<List<Object[]>, Void>() {
             @Override
             protected List<Object[]> doInBackground() throws Exception {
-                // Fetch all students and all permits
                 List<Student> students = studentRepo.getAll();
                 List<StudentPermit> allPermits = permitRepo.getBySchool(schoolId);
 
-                // Group permits by studentId or name/class fallback
                 Map<String, List<StudentPermit>> permitsByStudent = new HashMap<>();
                 for (StudentPermit p : allPermits) {
                     String key = p.getStudentId();
@@ -93,7 +88,6 @@ public class StudentDataPanel extends JPanel {
                     String key = s.getId();
                     List<StudentPermit> studentPermits = permitsByStudent.getOrDefault(key, new ArrayList<>());
                     
-                    // Fallback to name|class if no matches by ID (for old data)
                     if (studentPermits.isEmpty()) {
                         studentPermits = permitsByStudent.getOrDefault(s.getFullName() + "|" + s.getClassName(), new ArrayList<>());
                     }
@@ -144,7 +138,6 @@ public class StudentDataPanel extends JPanel {
         }.execute();
     }
 
-    // Inner classes for Button in Table
     class ButtonRenderer extends JButton implements javax.swing.table.TableCellRenderer {
         public ButtonRenderer() {
             setOpaque(true);
@@ -158,7 +151,6 @@ public class StudentDataPanel extends JPanel {
 
     class ButtonEditor extends DefaultCellEditor {
         private String label;
-        private boolean isPushed;
 
         public ButtonEditor(JCheckBox checkBox) {
             super(checkBox);
@@ -174,19 +166,16 @@ public class StudentDataPanel extends JPanel {
                 String className = (String) tableModel.getValueAt(row, 2);
                 showHistory(name, className);
             });
-            isPushed = true;
             return button;
         }
 
         @Override
         public Object getCellEditorValue() {
-            isPushed = false;
             return label;
         }
 
         @Override
         public boolean stopCellEditing() {
-            isPushed = false;
             return super.stopCellEditing();
         }
 
