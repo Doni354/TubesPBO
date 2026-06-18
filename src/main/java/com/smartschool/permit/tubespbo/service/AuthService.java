@@ -7,7 +7,9 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.smartschool.permit.tubespbo.app.UserSession;
 import com.smartschool.permit.tubespbo.model.AdminUser;
+import com.smartschool.permit.tubespbo.model.Student;
 import com.smartschool.permit.tubespbo.repository.AdminRepository;
+import com.smartschool.permit.tubespbo.repository.StudentRepository;
 
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -20,14 +22,25 @@ import java.util.Scanner;
  */
 public class AuthService {
     private final AdminRepository adminRepo;
+    private final StudentRepository studentRepo;
     private final String API_KEY = "AIzaSyB9L6LOrxcnDZov4xEH522MZEqOtmTXfmg";
 
-    // Dependency Injection via Constructor
-    public AuthService(AdminRepository adminRepo) {
-        this.adminRepo = adminRepo;
+    public AuthService() {
+        this.adminRepo = new AdminRepository();
+        this.studentRepo = new StudentRepository();
     }
 
-    public AdminUser login(String email, String password) throws Exception {
+    // Deprecated constructor for backward compatibility
+    public AuthService(AdminRepository adminRepo) {
+        this.adminRepo = adminRepo;
+        this.studentRepo = new StudentRepository();
+    }
+
+    /**
+     * Login yang menghandle Admin dan Siswa.
+     * Mengembalikan AdminUser atau Student.
+     */
+    public Object login(String email, String password) throws Exception {
         String urlStr = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + API_KEY;
         
         URL url = java.net.URI.create(urlStr).toURL();
@@ -36,7 +49,6 @@ public class AuthService {
         conn.setRequestProperty("Content-Type", "application/json; utf-8");
         conn.setDoOutput(true);
 
-        
         JsonObject jsonPayload = new JsonObject();
         jsonPayload.addProperty("email", email);
         jsonPayload.addProperty("password", password);
@@ -57,18 +69,24 @@ public class AuthService {
             responseBody = scanner.useDelimiter("\\A").next();
         }
 
-
         JsonObject jsonResponse = JsonParser.parseString(responseBody).getAsJsonObject();
         String uid = jsonResponse.get("localId").getAsString();
 
-
+        // 1. Cek apakah Admin
         AdminUser adminUser = adminRepo.getByUid(uid);
-        if (adminUser == null) {
-            throw new Exception("Akun terdaftar di Auth, tapi datanya ga ada di Firestore (bukan admin)!");
+        if (adminUser != null) {
+            UserSession.getInstance().login(adminUser);
+            return adminUser;
         }
 
-        UserSession.getInstance().login(adminUser);
-        return adminUser;
+        // 2. Cek apakah Siswa
+        Student student = studentRepo.getByUid(uid);
+        if (student != null) {
+            UserSession.getInstance().loginAsStudent(student);
+            return student;
+        }
+
+        throw new Exception("Akun terdaftar, tapi data profil tidak ditemukan (hubungi admin)!");
     }
 
     public void logout() {

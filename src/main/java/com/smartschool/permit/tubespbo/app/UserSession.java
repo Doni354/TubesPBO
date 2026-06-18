@@ -4,6 +4,7 @@
  */
 package com.smartschool.permit.tubespbo.app;
 import com.smartschool.permit.tubespbo.model.AdminUser;
+import com.smartschool.permit.tubespbo.model.Student;
 /**
  *
  * @author Doni354
@@ -11,6 +12,7 @@ import com.smartschool.permit.tubespbo.model.AdminUser;
 public class UserSession {
     private static UserSession instance;
     private AdminUser currentUser;
+    private Student currentStudent;
 
     private UserSession() {}
 
@@ -21,12 +23,10 @@ public class UserSession {
         return instance;
     }
 
+    // === Admin Session ===
     public void login(AdminUser user) {
         this.currentUser = user;
-    }
-
-    public void logout() {
-        this.currentUser = null;
+        this.currentStudent = null; // pastikan hanya 1 role aktif
     }
 
     public AdminUser getCurrentUser() {
@@ -41,7 +41,29 @@ public class UserSession {
         return currentUser != null && currentUser.isSuperAdmin();
     }
 
+    // === Student Session ===
+    public void loginAsStudent(Student student) {
+        this.currentStudent = student;
+        this.currentUser = null; // pastikan hanya 1 role aktif
+    }
+
+    public Student getCurrentStudent() {
+        return currentStudent;
+    }
+
+    public boolean isStudent() {
+        return currentStudent != null;
+    }
+
+    // === Shared ===
+    public void logout() {
+        this.currentUser = null;
+        this.currentStudent = null;
+    }
+
     public String getSchoolId() {
-        return currentUser != null ? currentUser.getSchoolId() : null;
+        if (currentUser != null) return currentUser.getSchoolId();
+        if (currentStudent != null) return currentStudent.getSchoolId();
+        return null;
     }
 }

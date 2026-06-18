@@ -212,15 +212,43 @@ public class FormKeterlambatan extends javax.swing.JFrame {
         scrollPane.setBorder(null);
         cp.add(scrollPane, BorderLayout.CENTER);
 
-        JButton adminBtn = new JButton("Masuk sebagai Admin");
-        adminBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        adminBtn.addActionListener(e -> {
-            this.dispose();
-            new com.smartschool.permit.tubespbo.gui.login.LoginFrame().setVisible(true);
-        });
-        
+        // Footer buttons
         JPanel footerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        footerPanel.add(adminBtn);
+        
+        if (com.smartschool.permit.tubespbo.app.UserSession.getInstance().isStudent()) {
+            JLabel welcomeLabel = new JLabel("Login sebagai: " + 
+                com.smartschool.permit.tubespbo.app.UserSession.getInstance().getCurrentStudent().getFullName() + " (" + 
+                com.smartschool.permit.tubespbo.app.UserSession.getInstance().getCurrentStudent().getClassName() + ")");
+            welcomeLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+            footerPanel.add(welcomeLabel);
+            
+            JButton logoutBtn = new JButton("Logout");
+            logoutBtn.addActionListener(e -> {
+                com.smartschool.permit.tubespbo.app.UserSession.getInstance().logout();
+                this.dispose();
+                new FormKeterlambatan().setVisible(true);
+            });
+            footerPanel.add(logoutBtn);
+            
+            // Hide input fields for student
+            FieldNama.setVisible(false);
+            jLabel3.setVisible(false);
+            jLabel4.setVisible(false);
+            jLabel5.setVisible(false);
+            jLabel6.setVisible(false);
+            jLabel7.setVisible(false);
+            tingkatPanel.setVisible(false);
+            kelasPanel.setVisible(false);
+        } else {
+            JButton loginBtn = new JButton("Login (Siswa / Admin)");
+            loginBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            loginBtn.addActionListener(e -> {
+                this.dispose();
+                new com.smartschool.permit.tubespbo.gui.login.LoginFrame().setVisible(true);
+            });
+            footerPanel.add(loginBtn);
+        }
+        
         cp.add(footerPanel, BorderLayout.SOUTH);
 
         buttonGroup1.add(RadioX); buttonGroup1.add(RadioXI); buttonGroup1.add(RadioXII);
@@ -236,56 +264,68 @@ public class FormKeterlambatan extends javax.swing.JFrame {
     }
 
     private void submitLateEntry() {
-        String nama = FieldNama.getText().trim();
-        if (nama.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Nama lengkap harus diisi!", "Validasi Gagal", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        
-        // Format to Title Case
-        String[] words = nama.split("\\s+");
-        StringBuilder sb = new StringBuilder();
-        for (String w : words) {
-            if (!w.isEmpty()) sb.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1).toLowerCase()).append(" ");
-        }
-        nama = sb.toString().trim();
-        FieldNama.setText(nama);
-
-        String tingkat = RadioX.isSelected() ? "X" : (RadioXI.isSelected() ? "XI" : (RadioXII.isSelected() ? "XII" : ""));
-        if (tingkat.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Pilih tingkat kelas!", "Validasi Gagal", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
+        String nama = "";
+        String tingkat = "";
         String kelas = "";
-        if (RadioAlphabet.isSelected()) kelas = "A";
-        else if (RadioAlphabetB.isSelected()) kelas = "B";
-        else if (RadioAlphabetC.isSelected()) kelas = "C";
-        else if (RadioAlphabetD.isSelected()) kelas = "D";
-        else if (RadioAlphabetE.isSelected()) kelas = "E";
-        else if (RadioAlphabetF.isSelected()) kelas = "F";
-        else if (RadioAlphabetG.isSelected()) kelas = "G";
-        else if (RadioAlphabetH.isSelected()) kelas = "H";
-        else if (RadioAlphabetI.isSelected()) kelas = "I";
-        else if (RadioAlphabetJ.isSelected()) kelas = "J";
-        else if (RadioAlphabetK.isSelected()) kelas = "K";
-        
-        if (kelas.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Pilih kelas!", "Validasi Gagal", JOptionPane.WARNING_MESSAGE);
-            return;
+        String alasan = AreaReason.getText().trim();
+
+        if (com.smartschool.permit.tubespbo.app.UserSession.getInstance().isStudent()) {
+            nama = com.smartschool.permit.tubespbo.app.UserSession.getInstance().getCurrentStudent().getFullName();
+            String fullClassName = com.smartschool.permit.tubespbo.app.UserSession.getInstance().getCurrentStudent().getClassName();
+            // Split to tingkat and kelas for fallback if needed, but we'll use fullClassName
+            String[] split = fullClassName.split("-");
+            tingkat = split[0];
+            if (split.length > 1) kelas = split[1];
+        } else {
+            nama = FieldNama.getText().trim();
+            if (nama.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Nama lengkap harus diisi!", "Validasi Gagal", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            // Format to Title Case
+            String[] words = nama.split("\\s+");
+            StringBuilder sb = new StringBuilder();
+            for (String w : words) {
+                if (!w.isEmpty()) sb.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1).toLowerCase()).append(" ");
+            }
+            nama = sb.toString().trim();
+            FieldNama.setText(nama);
+
+            tingkat = RadioX.isSelected() ? "X" : (RadioXI.isSelected() ? "XI" : (RadioXII.isSelected() ? "XII" : ""));
+            if (tingkat.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Pilih tingkat kelas!", "Validasi Gagal", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            if (RadioAlphabet.isSelected()) kelas = "A";
+            else if (RadioAlphabetB.isSelected()) kelas = "B";
+            else if (RadioAlphabetC.isSelected()) kelas = "C";
+            else if (RadioAlphabetD.isSelected()) kelas = "D";
+            else if (RadioAlphabetE.isSelected()) kelas = "E";
+            else if (RadioAlphabetF.isSelected()) kelas = "F";
+            else if (RadioAlphabetG.isSelected()) kelas = "G";
+            else if (RadioAlphabetH.isSelected()) kelas = "H";
+            else if (RadioAlphabetI.isSelected()) kelas = "I";
+            else if (RadioAlphabetJ.isSelected()) kelas = "J";
+            else if (RadioAlphabetK.isSelected()) kelas = "K";
+            
+            if (kelas.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Pilih kelas!", "Validasi Gagal", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
         }
 
-        String alasan = AreaReason.getText().trim();
         if (alasan.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Alasan keterlambatan harus diisi!", "Validasi Gagal", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        String fullKelas = tingkat + "-" + kelas;
-        String finalNama = nama;
+        final String submissionNama = nama;
+        final String submissionKelas = tingkat + "-" + kelas;
 
         int confirm = JOptionPane.showConfirmDialog(this,
-            "Apakah data sudah benar?\n\nNama: " + finalNama + "\nKelas: " + fullKelas + "\nAlasan: " + alasan,
+            "Apakah data sudah benar?\n\nNama: " + submissionNama + "\nKelas: " + submissionKelas + "\nAlasan: " + alasan,
             "Konfirmasi", JOptionPane.YES_NO_OPTION);
 
         if (confirm != JOptionPane.YES_OPTION) return;
@@ -298,8 +338,8 @@ public class FormKeterlambatan extends javax.swing.JFrame {
                 PermitService service = new PermitService(repo);
 
                 StudentPermit permit = new StudentPermit();
-                permit.setStudentName(finalNama);
-                permit.setClassName(fullKelas);
+                permit.setStudentName(submissionNama);
+                permit.setClassName(submissionKelas);
                 permit.setReason(alasan);
                 permit.setType(PermitType.LATE_ENTRY);
                 permit.setSchoolId("sch_001");

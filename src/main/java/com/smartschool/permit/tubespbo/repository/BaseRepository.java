@@ -8,14 +8,18 @@ package com.smartschool.permit.tubespbo.repository;
  *
  * @author Doni354
  */
-import com.google.api.core.ApiFuture;
-import com.google.cloud.firestore.*;
-import com.smartschool.permit.tubespbo.app.FirestoreConnection;
-import com.smartschool.permit.tubespbo.model.BaseModel;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import com.google.api.core.ApiFuture;
+import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.DocumentSnapshot;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.cloud.firestore.QuerySnapshot;
+import com.smartschool.permit.tubespbo.app.FirestoreConnection;
+import com.smartschool.permit.tubespbo.model.BaseModel;
 
 public abstract class BaseRepository<T extends BaseModel> implements CrudRepository<T> {
     protected final String collectionName;

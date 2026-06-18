@@ -3,9 +3,7 @@ package com.smartschool.permit.tubespbo.gui.login;
 import java.awt.event.ActionEvent;
 import javax.swing.*;
 import com.smartschool.permit.tubespbo.gui.dashboard.DashboardUtama;
-import com.smartschool.permit.tubespbo.gui.formDispen.FormKeterlambatan;
 import com.smartschool.permit.tubespbo.service.AuthService;
-import com.smartschool.permit.tubespbo.repository.AdminRepository;
 
 public class LoginFrame extends JFrame {
 
@@ -29,13 +27,13 @@ public class LoginFrame extends JFrame {
         backButton = new JButton();
 
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        setTitle("Admin Login");
+        setTitle("Login - Smartschool Permit");
         setResizable(false);
 
         jPanel1.setBorder(BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
 
         jLabel1.setFont(new java.awt.Font("Segoe UI", 1, 18));
-        jLabel1.setText("Admin Login");
+        jLabel1.setText("Login Siswa / Admin");
 
         GroupLayout jPanel1Layout = new GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
@@ -61,10 +59,10 @@ public class LoginFrame extends JFrame {
         loginButton.setText("Masuk");
         loginButton.addActionListener(this::handleLogin);
 
-        backButton.setText("Kembali");
+        backButton.setText("Daftar Akun");
         backButton.addActionListener(e -> {
             this.dispose();
-            new FormKeterlambatan().setVisible(true);
+            new com.smartschool.permit.tubespbo.gui.login.StudentRegisterFrame().setVisible(true);
         });
 
         GroupLayout layout = new GroupLayout(getContentPane());
@@ -140,7 +138,7 @@ public class LoginFrame extends JFrame {
         new SwingWorker<Void, Void>() {
             @Override
             protected Void doInBackground() throws Exception {
-                AuthService authService = new AuthService(new AdminRepository());
+                AuthService authService = new AuthService();
                 authService.login(email, password);
                 return null;
             }
@@ -151,7 +149,12 @@ public class LoginFrame extends JFrame {
                     get(); // will throw if login failed
                     JOptionPane.showMessageDialog(LoginFrame.this, "Login berhasil! Selamat datang.", "Berhasil", JOptionPane.INFORMATION_MESSAGE);
                     LoginFrame.this.dispose();
-                    new DashboardUtama().setVisible(true);
+                    
+                    if (com.smartschool.permit.tubespbo.app.UserSession.getInstance().isStudent()) {
+                        new com.smartschool.permit.tubespbo.gui.formDispen.FormKeterlambatan().setVisible(true);
+                    } else {
+                        new DashboardUtama().setVisible(true);
+                    }
                 } catch (Exception ex) {
                     String msg = ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage();
                     JOptionPane.showMessageDialog(LoginFrame.this, msg, "Login Gagal", JOptionPane.ERROR_MESSAGE);
