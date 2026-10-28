@@ -15,6 +15,9 @@
     - [Diagram Service Layer](#diagram-service-layer)
     - [Diagram GUI Layer](#diagram-gui-layer)
     - [Diagram Infrastruktur (Singleton)](#diagram-infrastruktur-singleton)
+    - [Diagram PlantUML (Standar UML)](#diagram-plantuml-standar-uml)
+      - [Diagram 1: Core Architecture (Model, Repo, Service, App)](#diagram-1-core-architecture-model-repo-service-app)
+      - [Diagram 2: Presentation / GUI Layer (Swing)](#diagram-2-presentation--gui-layer-swing)
   - [📂 Struktur Package](#-struktur-package)
   - [📖 Detail Modul \& Class](#-detail-modul--class)
     - [Modul 1: Application Core (`app`)](#modul-1-application-core-app)
@@ -250,7 +253,8 @@ classDiagram
     class StudentRepository {
         +StudentRepository()
         #toEntity(DocumentSnapshot) Student
-        +getByEmail(String) Student
+        +getByUid(String) Student
+        +createWithId(String, Student)
     }
 
     CrudRepository <|.. BaseRepository
@@ -300,7 +304,16 @@ classDiagram
         +getMonthlyRecap(String, int, int) Map
     }
 
+    class StudentAuthService {
+        -studentRepo : StudentRepository
+        -API_KEY : String
+        +register(String, String, String, String) Student
+        +login(String, String) Student
+    }
+
     AuthService --> AdminRepository
+    AuthService --> StudentRepository
+    StudentAuthService --> StudentRepository
     AdminService --> AdminRepository
     PermitService --> PermitRepository
     ReportService --> PermitRepository
@@ -467,6 +480,579 @@ classDiagram
 
     FirestoreConnection ..> Firestore
     UserSession --> AdminUser
+```
+
+### Diagram PlantUML (Standar UML)
+
+Berikut adalah definisi diagram class dalam format **PlantUML** standar, yang mencakup seluruh layer, visibilitas method/field, tipe data, serta hubungan antar-class secara detail.
+
+#### Diagram 1: Core Architecture (Model, Repo, Service, App)
+
+```plantuml
+@startuml SmartSchool_Core_Class_Diagram
+skinparam classAttributeIconSize 0
+skinparam monochrome false
+skinparam roundcorner 10
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam linetype ortho
+
+title Class Diagram — SmartSchool Permit System (Core Architecture)
+
+' ==========================================
+' PACKAGE: app (Infrastructure / Singleton)
+' ==========================================
+package "com.smartschool.permit.tubespbo.app" {
+    class FirestoreConnection <<Singleton>> {
+        - {static} instance : FirestoreConnection
+        - db : Firestore
+        - FirestoreConnection()
+        + {static} getInstance() : FirestoreConnection
+        + getDb() : Firestore
+    }
+
+    class UserSession <<Singleton>> {
+        - {static} instance : UserSession
+        - currentUser : AdminUser
+        - currentStudent : Student
+        - UserSession()
+        + {static} getInstance() : UserSession
+        + login(user: AdminUser) : void
+        + loginAsStudent(student: Student) : void
+        + logout() : void
+        + getCurrentUser() : AdminUser
+        + getCurrentStudent() : Student
+        + isLoggedIn() : boolean
+        + isStudent() : boolean
+        + isSuperAdmin() : boolean
+        + getSchoolId() : String
+    }
+}
+
+' ==========================================
+' PACKAGE: model.enums
+' ==========================================
+package "com.smartschool.permit.tubespbo.model.enums" {
+    enum PermitStatus {
+        PENDING
+        APPROVED
+    }
+
+    enum PermitType {
+        LATE_ENTRY
+        EXIT_PERMIT
+    }
+
+    enum UserRole {
+        SUPER_ADMIN
+        ADMIN_PIKET
+        + isSuperAdmin() : boolean
+    }
+}
+
+' ==========================================
+' PACKAGE: model (Domain Entity)
+' ==========================================
+package "com.smartschool.permit.tubespbo.model" {
+    interface Filterable {
+        + matchesFilter(keyword: String) : boolean
+    }
+
+    interface Exportable {
+        + toExportRow() : Map<String, Object>
+    }
+
+    abstract class BaseModel {
+        # id : String
+        + getId() : String
+        + setId(id: String) : void
+        + {abstract} toMap() : Map<String, Object>
+        + {abstract} fromMap(map: Map<String, Object>) : void
+    }
+
+    class AdminUser {
+        - email : String
+        - name : String
+        - role : UserRole
+        - schoolId : String
+        - createdAt : long
+        - createdBy : String
+        + AdminUser()
+        + isSuperAdmin() : boolean
+        + toMap() : Map<String, Object>
+        + fromMap(map: Map<String, Object>) : void
+        + matchesFilter(keyword: String) : boolean
+        + getEmail() : String
+        + getName() : String
+        + getRole() : UserRole
+        + getSchoolId() : String
+    }
+
+    class Student {
+        - email : String
+        - fullName : String
+        - className : String
+        - schoolId : String
+        - createdAt : long
+        + Student()
+        + toMap() : Map<String, Object>
+        + fromMap(map: Map<String, Object>) : void
+        + getEmail() : String
+        + getFullName() : String
+        + getClassName() : String
+        + getSchoolId() : String
+    }
+
+    class StudentPermit {
+        - type : PermitType
+        - studentName : String
+        - className : String
+        - studentId : String
+        - reason : String
+        - timestamp : long
+        - createdAt : Timestamp
+        - schoolId : String
+        - tahunAjaran : String
+        - status : PermitStatus
+        - approvedBy : String
+        - approvedById : String
+        - approvedAt : long
+        - isSuperAdminApproved : boolean
+        - arrivalTimestamp : long
+        - exitTimestamp : long
+        - returnTimestamp : long
+        + StudentPermit()
+        + approve(admin: AdminUser) : void
+        + isPending() : boolean
+        + isLateEntry() : boolean
+        + isExitPermit() : boolean
+        + getDurationMinutes() : int
+        + toMap() : Map<String, Object>
+        + fromMap(map: Map<String, Object>) : void
+        + toExportRow() : Map<String, Object>
+        + matchesFilter(keyword: String) : boolean
+    }
+
+    class SchoolProfile {
+        - id : String
+        - name : String
+        - address : String
+        - phone : String
+        - email : String
+        - headmasterName : String
+        - studentAffairsName : String
+        + getId() : String
+        + getName() : String
+        + getAddress() : String
+    }
+
+    class PermitSummary {
+        - studentName : String
+        - className : String
+        - lateCount : int
+        - exitCount : int
+        - totalLateMinutes : int
+        - totalExitMinutes : int
+        + getTotalCount() : int
+        + toExportRow() : Map<String, Object>
+    }
+
+    class StatisticsData {
+        - totalLateEntry : int
+        - totalExitPermit : int
+        - todayLateCount : int
+        - todayExitCount : int
+        - pendingCount : int
+        - todayCount : int
+        + calculate(permits: List<StudentPermit>) : void
+    }
+}
+
+' ==========================================
+' PACKAGE: repository (Data Access Layer)
+' ==========================================
+package "com.smartschool.permit.tubespbo.repository" {
+    interface CrudRepository<T> {
+        + getAll() : List<T>
+        + getById(id: String) : T
+        + create(entity: T) : String
+        + update(id: String, data: Map<String, Object>) : void
+        + delete(id: String) : void
+    }
+
+    abstract class BaseRepository<T extends BaseModel> {
+        # collectionName : String
+        # db : Firestore
+        + BaseRepository(collectionName: String)
+        # {abstract} toEntity(doc: DocumentSnapshot) : T
+        + getAll() : List<T>
+        + getById(id: String) : T
+        + create(entity: T) : String
+        + update(id: String, data: Map<String, Object>) : void
+        + delete(id: String) : void
+    }
+
+    class AdminRepository {
+        + AdminRepository()
+        # toEntity(doc: DocumentSnapshot) : AdminUser
+        + getBySchool(schoolId: String) : List<AdminUser>
+        + getByUid(uid: String) : AdminUser
+    }
+
+    class StudentRepository {
+        + StudentRepository()
+        # toEntity(doc: DocumentSnapshot) : Student
+        + getByUid(uid: String) : Student
+        + createWithId(uid: String, student: Student) : void
+    }
+
+    class PermitRepository {
+        + PermitRepository()
+        # toEntity(doc: DocumentSnapshot) : StudentPermit
+        + getBySchool(schoolId: String) : List<StudentPermit>
+        + getByType(schoolId: String, type: PermitType) : List<StudentPermit>
+        + approvePermit(permitId: String, approvalData: Map<String, Object>) : void
+    }
+}
+
+' ==========================================
+' PACKAGE: service (Business Logic Layer)
+' ==========================================
+package "com.smartschool.permit.tubespbo.service" {
+    class AuthService {
+        - adminRepo : AdminRepository
+        - studentRepo : StudentRepository
+        - API_KEY : String
+        + AuthService()
+        + AuthService(adminRepo: AdminRepository)
+        + login(email: String, password: String) : Object
+        + logout() : void
+    }
+
+    class StudentAuthService {
+        - studentRepo : StudentRepository
+        - API_KEY : String
+        + StudentAuthService(studentRepo: StudentRepository)
+        + register(email: String, password: String, fullName: String, className: String) : Student
+        + login(email: String, password: String) : Student
+    }
+
+    class AdminService {
+        - adminRepo : AdminRepository
+        - API_KEY : String
+        + AdminService(adminRepo: AdminRepository)
+        + getAllAdmins(schoolId: String) : List<AdminUser>
+        + createAdmin(email: String, password: String, name: String, schoolId: String) : AdminUser
+        + deleteAdmin(uid: String) : void
+        + changePassword(uid: String, newPassword: String) : void
+    }
+
+    class PermitService {
+        - permitRepo : PermitRepository
+        + PermitService(permitRepo: PermitRepository)
+        + getAllPermits(schoolId: String) : List<StudentPermit>
+        + getPermitsByType(schoolId: String, type: PermitType) : List<StudentPermit>
+        + createPermit(permit: StudentPermit) : String
+        + updatePermit(id: String, permit: StudentPermit) : void
+        + deletePermit(id: String) : void
+        + approvePermit(permitId: String, admin: AdminUser) : void
+        + filterPermits(permits: List<StudentPermit>, keyword: String, className: String) : List<StudentPermit>
+    }
+
+    class ReportService {
+        - permitRepo : PermitRepository
+        + ReportService(permitRepo: PermitRepository)
+        + getDashboardStats(schoolId: String) : StatisticsData
+        + getStudentSummary(schoolId: String) : List<PermitSummary>
+        + getMonthlyRecap(schoolId: String, year: int, month: int) : Map<String, int[]>
+    }
+}
+
+' ==========================================
+' PACKAGE: util
+' ==========================================
+package "com.smartschool.permit.tubespbo.util" {
+    class DateUtils {
+        - {static} ZONE : ZoneId
+        - {static} LOCALE_ID : Locale
+        + {static} formatDate(timestamp: long) : String
+        + {static} formatTime(timestamp: long) : String
+        + {static} formatDateTime(timestamp: long) : String
+        + {static} isToday(timestamp: long) : boolean
+    }
+
+    class SchoolUtils {
+        + {static} getTahunAjaran(timestamp: long) : String
+        + {static} getGrades() : String[]
+        + {static} getAllClasses() : List<String>
+        + {static} parseClass(cls: String) : String[]
+    }
+
+    class XlsxUtils {
+        + {static} exportTable(table: JTable, defaultFileName: String) : void
+    }
+}
+
+' ==========================================
+' RELATIONSHIPS & ASSOCIATIONS
+' ==========================================
+
+' Model Inheritance & Implementation
+BaseModel <|-- AdminUser
+BaseModel <|-- Student
+BaseModel <|-- StudentPermit
+Filterable <|.. AdminUser
+Filterable <|.. StudentPermit
+Exportable <|.. StudentPermit
+Exportable <|.. PermitSummary
+
+' Model Associations with Enums
+AdminUser --> UserRole : uses
+StudentPermit --> PermitType : uses
+StudentPermit --> PermitStatus : uses
+
+' Repository Inheritance & Implementation
+CrudRepository <|.. BaseRepository
+BaseRepository <|-- AdminRepository
+BaseRepository <|-- StudentRepository
+BaseRepository <|-- PermitRepository
+BaseRepository ..> FirestoreConnection : gets Firestore instance
+
+' Service to Repository Dependencies
+AuthService --> AdminRepository : depends on
+AuthService --> StudentRepository : depends on
+StudentAuthService --> StudentRepository : depends on
+AdminService --> AdminRepository : depends on
+PermitService --> PermitRepository : depends on
+ReportService --> PermitRepository : depends on
+
+' Session & Security Associations
+UserSession o-- AdminUser : holds currentUser
+UserSession o-- Student : holds currentStudent
+AuthService ..> UserSession : manages session
+StudentAuthService ..> UserSession : manages session
+PermitService ..> UserSession : gets schoolId
+
+' Service to Model Operations
+PermitService ..> StudentPermit : manages
+ReportService ..> StatisticsData : generates
+ReportService ..> PermitSummary : aggregates
+ReportService ..> StudentPermit : analyzes
+
+@enduml
+```
+
+#### Diagram 2: Presentation / GUI Layer (Swing)
+
+```plantuml
+@startuml SmartSchool_GUI_Class_Diagram
+skinparam classAttributeIconSize 0
+skinparam monochrome false
+skinparam roundcorner 10
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam linetype ortho
+
+title Class Diagram — Presentation / GUI Layer (Java Swing)
+
+' External Swing Classes
+package "javax.swing" {
+    class JFrame
+    class JPanel
+}
+
+' ==========================================
+' PACKAGE: gui.login
+' ==========================================
+package "com.smartschool.permit.tubespbo.gui.login" {
+    class Main {
+        + {static} main(args: String[]) : void
+    }
+
+    class LoginFrame {
+        - emailField : JTextField
+        - passwordField : JPasswordField
+        - loginButton : JButton
+        - backButton : JButton
+        + LoginFrame()
+        - initComponents() : void
+        - handleLogin(evt: ActionEvent) : void
+    }
+
+    class StudentRegisterFrame {
+        - emailField : JTextField
+        - passwordField : JPasswordField
+        - confirmPasswordField : JPasswordField
+        - namaField : JTextField
+        - registerButton : JButton
+        + StudentRegisterFrame()
+        - initComponents() : void
+        - handleRegister() : void
+    }
+}
+
+' ==========================================
+' PACKAGE: gui.formDispen
+' ==========================================
+package "com.smartschool.permit.tubespbo.gui.formDispen" {
+    class FormKeterlambatan {
+        - FieldNama : JTextField
+        - RadioX : JRadioButton
+        - RadioAlphabet : JRadioButton
+        - AreaAlasan : JTextArea
+        - permitService : PermitService
+        + FormKeterlambatan()
+        - initComponents() : void
+        - applyCustomStyles() : void
+        - submitLateEntry() : void
+    }
+
+    class FormDispensasi {
+        - FieldNama : JTextField
+        - AreaAlasan : JTextArea
+        - CheckKembali : JCheckBox
+        - permitService : PermitService
+        + FormDispensasi()
+        - initComponents() : void
+        - applyCustomStyles() : void
+        - submitDispensasi() : void
+    }
+}
+
+' ==========================================
+' PACKAGE: gui.dashboard & widget
+' ==========================================
+package "com.smartschool.permit.tubespbo.gui.widget" {
+    class SidebarPanel {
+        - onMenuSelected : Consumer<String>
+        - onLogout : Runnable
+        + SidebarPanel(onMenuSelected: Consumer<String>, onLogout: Runnable)
+        - initComponents() : void
+    }
+}
+
+package "com.smartschool.permit.tubespbo.gui.dashboard" {
+    class DashboardUtama {
+        - cardLayout : CardLayout
+        - mainContentPanel : JPanel
+        - sidebar : SidebarPanel
+        + DashboardUtama()
+        + {static} main(args: String[]) : void
+    }
+
+    class DashboardPanel {
+        - reportService : ReportService
+        + DashboardPanel()
+        - initComponents() : void
+        + loadData() : void
+        + createCard(title: String, valLabel: JLabel) : JPanel
+    }
+
+    class LateEntryPanel {
+        - permitService : PermitService
+        - table : JTable
+        + LateEntryPanel()
+        - initComponents() : void
+        + loadData() : void
+        + applyFilter() : void
+        + approvePermit(row: int) : void
+        + deletePermit(row: int) : void
+    }
+
+    class ExitPermitPanel {
+        - permitService : PermitService
+        - table : JTable
+        + ExitPermitPanel()
+        - initComponents() : void
+        + loadData() : void
+        + applyFilter() : void
+        + approvePermit(row: int) : void
+        + deletePermit(row: int) : void
+    }
+
+    class ReportPanel {
+        - reportService : ReportService
+        - table : JTable
+        + ReportPanel()
+        - initComponents() : void
+        + loadData() : void
+        + loadStudentSummary() : void
+        + loadMonthlyRecap() : void
+    }
+
+    class StudentDataPanel {
+        - studentRepo : StudentRepository
+        - permitRepo : PermitRepository
+        - table : JTable
+        + StudentDataPanel()
+        - initComponents() : void
+        + loadData() : void
+        + showHistory(name: String, cls: String) : void
+    }
+
+    class StudentPermitHistoryFrame {
+        - studentName : String
+        - className : String
+        - permitRepo : PermitRepository
+        + StudentPermitHistoryFrame(name: String, cls: String)
+        - initComponents() : void
+        - loadData() : void
+    }
+
+    class AdminPanel {
+        - adminService : AdminService
+        - table : JTable
+        + AdminPanel()
+        - initComponents() : void
+        + loadData() : void
+        + createAdmin() : void
+        + deleteAdmin(row: int) : void
+        + changeAdminPassword(row: int) : void
+    }
+
+    class BlankPanel {
+        + BlankPanel(title: String)
+    }
+}
+
+' ==========================================
+' GUI INHERITANCE
+' ==========================================
+JFrame <|-- LoginFrame
+JFrame <|-- StudentRegisterFrame
+JFrame <|-- FormKeterlambatan
+JFrame <|-- FormDispensasi
+JFrame <|-- DashboardUtama
+JFrame <|-- StudentPermitHistoryFrame
+
+JPanel <|-- SidebarPanel
+JPanel <|-- DashboardPanel
+JPanel <|-- LateEntryPanel
+JPanel <|-- ExitPermitPanel
+JPanel <|-- ReportPanel
+JPanel <|-- StudentDataPanel
+JPanel <|-- AdminPanel
+JPanel <|-- BlankPanel
+
+' ==========================================
+' GUI COMPOSITION & NAVIGATION
+' ==========================================
+Main ..> LoginFrame : opens
+LoginFrame ..> DashboardUtama : navigates to (Admin)
+LoginFrame ..> FormKeterlambatan : navigates to (Student)
+LoginFrame ..> StudentRegisterFrame : navigates to
+
+DashboardUtama *-- SidebarPanel : contains
+DashboardUtama *-- DashboardPanel : contains in CardLayout
+DashboardUtama *-- LateEntryPanel : contains in CardLayout
+DashboardUtama *-- ExitPermitPanel : contains in CardLayout
+DashboardUtama *-- ReportPanel : contains in CardLayout
+DashboardUtama *-- StudentDataPanel : contains in CardLayout
+DashboardUtama *-- AdminPanel : contains in CardLayout
+
+StudentDataPanel ..> StudentPermitHistoryFrame : opens popup history
+
+@enduml
 ```
 
 ---
