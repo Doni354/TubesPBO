@@ -265,6 +265,7 @@ classDiagram
 classDiagram
     direction LR
 
+    class AuthService {
         -adminRepo : AdminRepository
         -studentRepo : StudentRepository
         -API_KEY : String
